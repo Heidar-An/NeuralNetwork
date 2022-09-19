@@ -42,20 +42,20 @@ func OutputActivationValues(NNetwork *Network){
 }
 
 func generateZeroVector(length int) vector {
-	v := vector{}
+	zeroVector := vector{}
 	for i := 0; i < length; i++ {
-		v = append(v, 0)
+		zeroVector = append(zeroVector, 0)
 	}
-	return v
+	return zeroVector
 }
 
 func generateRandomVector(length int) vector {
 	// make activations between 0 and 1
-	var random []float64
+	randomVector := vector{}
 	for i := 0; i < length; i++ {
-		random = append(random, (rand.Float64() - 0.5) * 2)
+		randomVector = append(randomVector, (rand.Float64() - 0.5) * 2)
 	}
-	return random
+	return randomVector
 }
 
 func createVectors(numWeights, numOther int) (vector, vector, vector) {
@@ -66,17 +66,17 @@ func createVectors(numWeights, numOther int) (vector, vector, vector) {
 }
 
 func NewNetwork(layers []int, lRate float32) Network {
-	var ls []Layer
+	var networkLayers []Layer
 
 	// ls[0] is inbetween the first and second layer
 	// ls[1] is inbetween the second and third layer ...
 	// create a new layer for every hidden layer
 	for i := 0; i < len(layers) - 1; i++ {
 		weights, biases, activations := createVectors(layers[i] * layers[i + 1], layers[i + 1])
-		ls = append(ls, NewLayer(layers[i], layers[i+1], weights, biases, activations))
+		networkLayers = append(networkLayers, NewLayer(layers[i], layers[i + 1], weights, biases, activations))
 	}
 
-	n := Network{layers[0], layers[len(layers)-1], len(layers), ls, lRate}
+	n := Network{layers[0], layers[len(layers) - 1], len(layers), networkLayers, lRate}
 	return n
 }
 
