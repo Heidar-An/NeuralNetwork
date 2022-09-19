@@ -1,6 +1,7 @@
 package network
 
 import (
+	"math"
 	"math/rand"
 	"fmt"
 	"io"
@@ -52,7 +53,7 @@ func generateRandomVector(length int) vector {
 	// make activations between 0 and 1
 	var random []float64
 	for i := 0; i < length; i++ {
-		random = append(random, rand.Float64())
+		random = append(random, (rand.Float64() - 0.5) * 2)
 	}
 	return random
 }
@@ -80,10 +81,8 @@ func NewNetwork(layers []int, lRate float32) Network {
 }
 
 func activationFunction(inp float64) float64{
-	if(inp > 0.0){
-		return 1.0
-	}
-	return 0.0
+	// sigmoid function
+	return 1 / (1 + math.Exp(-inp))
 }
 
 func FeedForward(net *Network, inputs[] float64) {
@@ -119,15 +118,24 @@ func FeedForward(net *Network, inputs[] float64) {
 	}
 }
 
-func CalCost(net *Network, correct []int) float64{
+func ApplyGradients(net *Network){
+
+}
+
+func CostDerivative(outputActivation, expectedValue float64) float64{
+	// partial derivative of cost with respect to the activation of an output node
+	return 2 * (outputActivation - expectedValue)
+}
+
+func CalCost(net Network, expectedValues []int) float64{
 	// cost function
 	// calculate and return (expected value - actual value) ** 2
-	lastActivations := net.layers[net.numLayers - 1].activations
-	totCost := 0.0
-	for i := 0; i < len(lastActivations); i++{
-		cost := (float64(correct[i]) - lastActivations[i])
-		totCost += cost * cost
+	lastLayerActivations := net.layers[net.numLayers - 1].activations
+	totalCost := 0.0
+	for i := 0; i < len(lastLayerActivations); i++{
+		cost := (lastLayerActivations[i] - float64(expectedValues[i]))
+		totalCost += cost * cost
 	}
 
-	return totCost
+	return totalCost
 }
