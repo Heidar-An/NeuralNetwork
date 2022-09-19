@@ -30,6 +30,16 @@ type Network struct {
 	learningRate float32
 }
 
+func OutputActivationValues(NNetwork *Network){
+	for i := 0; i < len(NNetwork.layers); i++{
+		currLayer := NNetwork.layers[i]
+		currActivations := currLayer.activations
+		for j := 0; j < len(currActivations); j++{
+			println("Activation", currActivations[j])
+		}
+	}
+}
+
 func generateZeroVector(length int) vector {
 	v := vector{}
 	for i := 0; i < length; i++ {
@@ -107,4 +117,8 @@ func FeedForward(net *Network, inputs[] float64) {
 			wSum = 0.0
 		}
 	}
+}
+
+func CalCost(net *Network, correct []int){
+
 }
