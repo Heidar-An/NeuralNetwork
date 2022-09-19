@@ -5,12 +5,10 @@ import (
 )
 
 func main() {
-	var layers []int
+	layers := []int{2, 2, 2}
 	learningRate := 0.1
-	layers[0] = 1
-	layers[1] = 1
-	network := network.NewNetwork(layers, float32(learningRate))
-	for i := 0; i < len(layers); i++{
-		
-	}
+	currNetwork := network.NewNetwork(layers, float32(learningRate))
+	inputs := []float64{2.5, 1}
+	
+	network.FeedForward(&currNetwork, inputs)
 }
