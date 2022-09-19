@@ -119,6 +119,15 @@ func FeedForward(net *Network, inputs[] float64) {
 	}
 }
 
-func CalCost(net *Network, correct []int){
+func CalCost(net *Network, correct []int) float64{
+	// cost function
+	// calculate and return (expected value - actual value) ** 2
+	lastActivations := net.layers[net.numLayers - 1].activations
+	totCost := 0.0
+	for i := 0; i < len(lastActivations); i++{
+		cost := (float64(correct[i]) - lastActivations[i])
+		totCost += cost * cost
+	}
 
+	return totCost
 }
