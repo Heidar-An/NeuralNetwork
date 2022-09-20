@@ -165,10 +165,11 @@ func GetActivationDerivatives(net *Network, weightedSums vector) vector {
 }
 
 func BackPropagation(net *Network, inputs, expected []float64) {
+	// A LOT OF COMMENTS HERE, because the function was hard to write
 	/*compute backpropagation
 	go through network, find out how much each weight and bias
 	has an effect on the network has a whole*/
-	
+
 	allActivations, allWeightedSums := FeedForward(net, inputs)
 
 	// calculate the partial derivatives of cost func w.r.t activations
@@ -193,11 +194,11 @@ func BackPropagation(net *Network, inputs, expected []float64) {
 		numOutputNodes := net.layers[i].nodesOut
 
 		// find the previous layers activations (for use in derivative)
-		prevLayerActivations := net.layers[i - 1].activations
+		prevLayerActivations := net.layers[i-1].activations
 
 		/* the node position decreases by the number of nodes outgoing
-		 has to point to the first node in the connected layer
-		 --the ones the weights are connected to */
+		has to point to the first node in the connected layer
+		--the ones the weights are connected to */
 		currNode -= numOutputNodes
 
 		// keep track of derivative value
@@ -219,7 +220,7 @@ func BackPropagation(net *Network, inputs, expected []float64) {
 			// multiply by the derivative of activation value w.r.t to weighted sum
 			currWeightDerivative *= activationDerivatives[tempCurrNode]
 
-			/* multiply by the derivative of cost function w.r.t to activation value 
+			/* multiply by the derivative of cost function w.r.t to activation value
 			of node connected to weight */
 			currWeightDerivative *= costDerivatives[tempCurrNode]
 			costGradientW = append(costGradientW, currWeightDerivative)
