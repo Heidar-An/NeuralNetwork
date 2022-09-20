@@ -9,6 +9,6 @@ func main() {
 	learningRate := 0.1
 	NNetwork := network.NewNetwork(layers, float32(learningRate))
 	inputs := []float64{2.5, 1}
-	
-	network.FeedForward(&NNetwork, inputs)
+	expected := []float64{1, 1}
+	network.BackPropagation(&NNetwork, inputs, expected)
 }
