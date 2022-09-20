@@ -79,6 +79,8 @@ func updateVectors(currLayer Layer) (vector, vector, vector) {
 }
 
 func NewNetwork(layers []int, lRate float32) Network {
+	// initialise a new network
+	// get number of neurons in each layer, number of layers and learning rate
 	var networkLayers []Layer
 
 	// ls[0] is inbetween the first and second layer
@@ -97,6 +99,9 @@ func FeedForward(net *Network, inputs []float64) (vector, vector) {
 	// completes feedforward through network
 	// returns values of all the activations and weighted sums
 	wSum := 0.0
+
+	// keep track of activation values and weighted sums
+	// needed for backpropagation
 	allActivations := vector{}
 	allWeightedSums := vector{}
 
@@ -104,11 +109,15 @@ func FeedForward(net *Network, inputs []float64) (vector, vector) {
 		currLayer := net.layers[k]
 		currWeights, currBiases, currActivations := updateVectors(currLayer)
 		prevActivations := inputs
+		// the first layer has to use the inputs values as previous activations
 		if k != 0 {
 			prevActivations = net.layers[k-1].activations
 		}
 		for i := 0; i < len(currActivations); i++ {
-			// compute weighted sum
+			/* compute weighted sum:
+			   sum(activation value from connecting node * weight value) ->
+			   for all weights ->
+			   add the bias afterwards */
 			for j := 0; j < len(prevActivations); j++ {
 				s := fmt.Sprintf("Randomised weight %g", currWeights[i+(j*len(currActivations))])
 				io.WriteString(os.Stdout, s)
@@ -120,6 +129,7 @@ func FeedForward(net *Network, inputs []float64) (vector, vector) {
 			w := fmt.Sprintf("w sum %g", wSum)
 			io.WriteString(os.Stdout, w)
 			println("")
+			// apply activation function (sigmoid) to the weighted sum
 			currActivations[i] = Activation(wSum)
 			allActivations = append(allActivations, currActivations[i])
 			wSum = 0.0
@@ -128,35 +138,112 @@ func FeedForward(net *Network, inputs []float64) (vector, vector) {
 	return allActivations, allWeightedSums
 }
 
-func BackPropagation(net *Network, inputs, expected []float64) {
-	allActivations, allWeightedSums := FeedForward(net, inputs)
+func GetCostDerivatives(lastLayer Layer, expected []float64) vector {
+	// get the partial derivatives of cost function w.r.t activation value
 	costDerivatives := vector{}
-
-	// calculate the partial derivatives of cost func w.r.t activations
-	lastLayer := net.layers[net.numLayers-1]
 	for i := 0; i < len(lastLayer.activations); i++ {
 		costDerivatives = append(costDerivatives, CostDerivative(lastLayer.activations[i], expected[i]))
 	}
+	return costDerivatives
+}
 
-	// calculate the partial dertivatives of cost w.r.t to weights,biases 
+func GetActivationDerivatives(net *Network, weightedSums vector) vector {
+	// get the partial derivatives of each activation value w.r.t weighted sum
+	activationDerivatives := vector{}
+
+	// keep track of how many nodes have been visited
+	activationCounter := 0
+	for i := 0; i < net.numLayers; i++ {
+		currLayer := net.layers[i]
+		for j := 0; j < len(currLayer.activations); j++ {
+			weightedSum := weightedSums[activationCounter]
+			activationDerivatives = append(activationDerivatives, ActivationDerivative(weightedSum))
+			activationCounter++
+		}
+	}
+	return activationDerivatives
+}
+
+func BackPropagation(net *Network, inputs, expected []float64) {
+	/*compute backpropagation
+	go through network, find out how much each weight and bias
+	has an effect on the network has a whole*/
+	
+	allActivations, allWeightedSums := FeedForward(net, inputs)
+
+	// calculate the partial derivatives of cost func w.r.t activations
+	lastLayer := net.layers[net.numLayers-1]
+	costDerivatives := GetCostDerivatives(lastLayer, expected)
+
+	// calculate the partial derivative of activation value w.r.t weighted sum
+	activationDerivatives := GetActivationDerivatives(net, allWeightedSums)
+
+	// keep track of gradients for each weight and bias
+	costGradientW := vector{}
+	//costGradientB := vector{}
+
+	// keep track of what node we are visiting (going from the back)
+	currNode := len(allActivations) - 1
+
+	// calculate the partial derivatives of cost w.r.t to weights, biases
 	for i := net.numLayers - 1; i >= 0; i-- {
+		currWeights := net.layers[i].weights
 
+		// how many nodes the weights are connected to.
+		numOutputNodes := net.layers[i].nodesOut
+
+		// find the previous layers activations (for use in derivative)
+		prevLayerActivations := net.layers[i - 1].activations
+
+		/* the node position decreases by the number of nodes outgoing
+		 has to point to the first node in the connected layer
+		 --the ones the weights are connected to */
+		currNode -= numOutputNodes
+
+		// keep track of derivative value
+		currWeightDerivative := 1.0
+		for j := 0; j < len(currWeights); j++ {
+			// create a temp var that stores the pos of the current node in the connecting layer
+			// in brackets just to be safe ;)
+			tempCurrNode := currNode + (j % numOutputNodes)
+
+			// find what activation (from the top of the layer) the current weight is connected to
+			// e.g. 1 means one node from the top
+
+			// finds the neuron value from the previous layer
+			// using floor division, we can find the previous layer
+			numActivationPrevLayer := j / numOutputNodes
+			// derivative of weighted sum w.r.t weight is activation values from prev layer
+			currWeightDerivative *= prevLayerActivations[numActivationPrevLayer]
+
+			// multiply by the derivative of activation value w.r.t to weighted sum
+			currWeightDerivative *= activationDerivatives[tempCurrNode]
+
+			/* multiply by the derivative of cost function w.r.t to activation value 
+			of node connected to weight */
+			currWeightDerivative *= costDerivatives[tempCurrNode]
+			costGradientW = append(costGradientW, currWeightDerivative)
+		}
 	}
 }
 
-func Activation(weightedInput float64) float64 {
-	// sigmoid function
-	return 1 / (1 + math.Exp(-weightedInput))
+func ApplyGradients(net *Network) {
+
 }
 
-func ActivationDerivative(weightedInput float64) float64 {
+func Activation(weightedSum float64) float64 {
+	// sigmoid function
+	return 1 / (1 + math.Exp(-weightedSum))
+}
+
+func ActivationDerivative(weightedSum float64) float64 {
 	// derivative of the sigmoid function, y, derivative is (y * (1 - y))
-	activationValue := Activation(weightedInput)
+	activationValue := Activation(weightedSum)
 	return activationValue * (1 - activationValue)
 }
 
 func Cost(net Network, expectedValues []int) float64 {
-	// cost function
+	// cost function, see how 'wrong' each final output value was
 	// calculate and return (expected value - actual value) ** 2
 	lastLayerActivations := net.layers[net.numLayers-1].activations
 	totalCost := 0.0
@@ -171,8 +258,4 @@ func Cost(net Network, expectedValues []int) float64 {
 func CostDerivative(outputActivation, expectedValue float64) float64 {
 	// partial derivative of cost with respect to the activation of an output node
 	return 2 * (outputActivation - expectedValue)
-}
-
-func ApplyGradients(net *Network) {
-
 }
