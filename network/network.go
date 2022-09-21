@@ -119,16 +119,20 @@ func FeedForward(net *Network, inputs []float64) (vector, vector) {
 			   for all weights ->
 			   add the bias afterwards */
 			for j := 0; j < len(prevActivations); j++ {
-				s := fmt.Sprintf("Randomised weight %g", currWeights[i+(j*len(currActivations))])
-				io.WriteString(os.Stdout, s)
-				println("")
+
+				// s := fmt.Sprintf("Randomised weight %g", currWeights[i+(j*len(currActivations))])
+				// io.WriteString(os.Stdout, s)
+				// println("")
+
 				wSum += currWeights[i+(j*len(currActivations))] * prevActivations[j]
 			}
 			wSum += currBiases[i]
 			allWeightedSums = append(allWeightedSums, wSum)
-			w := fmt.Sprintf("w sum %g", wSum)
-			io.WriteString(os.Stdout, w)
-			println("")
+
+			// w := fmt.Sprintf("w sum %g", wSum)
+			// io.WriteString(os.Stdout, w)
+			// println("")
+
 			// apply activation function (sigmoid) to the weighted sum
 			currActivations[i] = Activation(wSum)
 			allActivations = append(allActivations, currActivations[i])
@@ -153,7 +157,7 @@ func GetActivationDerivatives(net *Network, weightedSums vector) vector {
 
 	// keep track of how many nodes have been visited
 	activationCounter := 0
-	for i := 0; i < net.numLayers; i++ {
+	for i := 0; i < net.numLayers-1; i++ {
 		currLayer := net.layers[i]
 		for j := 0; j < len(currLayer.activations); j++ {
 			weightedSum := weightedSums[activationCounter]
@@ -173,7 +177,7 @@ func BackPropagation(net *Network, inputs, expected []float64) {
 	allActivations, allWeightedSums := FeedForward(net, inputs)
 
 	// calculate the partial derivatives of cost func w.r.t activations
-	lastLayer := net.layers[net.numLayers-1]
+	lastLayer := net.layers[net.numLayers-2]
 	costDerivatives := GetCostDerivatives(lastLayer, expected)
 
 	// calculate the partial derivative of activation value w.r.t weighted sum
@@ -185,16 +189,22 @@ func BackPropagation(net *Network, inputs, expected []float64) {
 
 	// keep track of what node we are visiting (going from the back)
 	currNode := len(allActivations) - 1
-
+	println(currNode)
 	// calculate the partial derivatives of cost w.r.t to weights, biases
-	for i := net.numLayers - 1; i >= 0; i-- {
+	for i := net.numLayers - 2; i >= 0; i-- {
+		
 		currWeights := net.layers[i].weights
 
 		// how many nodes the weights are connected to.
 		numOutputNodes := net.layers[i].nodesOut
 
-		// find the previous layers activations (for use in derivative)
-		prevLayerActivations := net.layers[i-1].activations
+		/* find the previous layers activations (for use in derivative)
+		   for the first layer, the activations are the input
+		   otherwise make the activations the ones from the previous layer*/
+		prevLayerActivations := inputs
+		if(i != 0){
+			prevLayerActivations = net.layers[i - 1].activations
+		}
 
 		/* the node position decreases by the number of nodes outgoing
 		has to point to the first node in the connected layer
@@ -206,8 +216,8 @@ func BackPropagation(net *Network, inputs, expected []float64) {
 		for j := 0; j < len(currWeights); j++ {
 			// create a temp var that stores the pos of the current node in the connecting layer
 			// in brackets just to be safe ;)
-			tempCurrNode := currNode + (j % numOutputNodes)
-
+			tempCurrNode := (j % numOutputNodes)
+			println("tempCurrNode", tempCurrNode)
 			// find what activation (from the top of the layer) the current weight is connected to
 			// e.g. 1 means one node from the top
 
