@@ -42,9 +42,9 @@ func LeftButtonClicked(){
 func mainT() {
 	layers := []int{2, 2, 2}
 	learningRate := 0.1
-	NNetwork := network.NewNetwork(layers, float32(learningRate))
+	NNetwork := network.NewNetwork(layers, learningRate)
 	inputs := []float64{2.5, 1}
-	expected := []float64{1, 1}
+	expected := []float64{1.0, 1.0}
 	network.BackPropagation(&NNetwork, inputs, expected)
 	
 	// costGradientW, costGradientB := network.BackPropagation(&NNetwork, inputs, expected)

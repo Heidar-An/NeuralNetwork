@@ -34,7 +34,7 @@ type Network struct {
 	outputNodes  int
 	numLayers    int
 	layers       []Layer
-	learningRate float32
+	learningRate float64
 }
 
 func OutputActivationValues(NNetwork Network) {
@@ -83,7 +83,7 @@ func updateVectors(currLayer Layer) (vector, vector, vector) {
 	return weights, biases, activations
 }
 
-func NewNetwork(layers []int, lRate float32) Network {
+func NewNetwork(layers []int, lRate float64) Network {
 	// initialise a new network
 	// get number of neurons in each layer, number of layers and learning rate
 	var networkLayers []Layer
@@ -91,9 +91,9 @@ func NewNetwork(layers []int, lRate float32) Network {
 	// ls[0] is inbetween the first and second layer
 	// ls[1] is inbetween the second and third layer ...
 	// create a new layer for every hidden layer
-	for i := 0; i < len(layers)-1; i++ {
-		weights, biases, activations := initialiseVectors(layers[i]*layers[i+1], layers[i+1])
-		networkLayers = append(networkLayers, NewLayer(layers[i], layers[i+1], weights, biases, activations))
+	for i := 0; i < len(layers) - 1; i++ {
+		weights, biases, activations := initialiseVectors(layers[i]*layers[i + 1], layers[i + 1])
+		networkLayers = append(networkLayers, NewLayer(layers[i], layers[i + 1], weights, biases, activations))
 	}
 
 	n := Network{layers[0], layers[len(layers)-1], len(layers), networkLayers, lRate}
@@ -222,18 +222,18 @@ func BackPropagation(net *Network, inputs, expected []float64) (vector, vector){
 	println(currNode)
 
 	// calculate the partial derivatives of cost w.r.t to weights, biases
-	for currLayer := net.numLayers - 2; currLayer >= 0; currLayer-- {
-		currWeights := net.layers[currLayer].weights
+	for currLayerIndex := net.numLayers - 2; currLayerIndex >= 0; currLayerIndex-- {
+		currWeights := net.layers[currLayerIndex].weights
 
 		// how many nodes the weights are connected to.
-		numOutputNodes := net.layers[currLayer].nodesOut
+		numOutputNodes := net.layers[currLayerIndex].nodesOut
 
 		/* find the previous layers activations (for use in derivative)
 		   for the first layer, the activations are the input
 		   otherwise make the activations the ones from the previous layer*/
 		prevLayerActivations := inputs
-		if(currLayer != 0){
-			prevLayerActivations = net.layers[currLayer - 1].activations
+		if(currLayerIndex != 0){
+			prevLayerActivations = net.layers[currLayerIndex - 1].activations
 		}
 
 		/* the node position decreases by the number of nodes outgoing
@@ -253,9 +253,9 @@ func BackPropagation(net *Network, inputs, expected []float64) (vector, vector){
 			/* multiply by the derivative of cost function w.r.t to activation value
 			of node connected to weight */
 			currWeightDerivative *= costDerivatives[tempCurrNode]
-			if(currLayer != net.numLayers - 2){
+			if(currLayerIndex != net.numLayers - 2){
 				// calculate the part of the derivative for the current weight if not in the last layer
-				currWeightDerivative = calcWeightDerivative(net, costGradientW, currLayer, tempCurrNode)
+				currWeightDerivative = calcWeightDerivative(net, costGradientW, currLayerIndex, tempCurrNode)
 			}
 			// finds the neuron value from the previous layer
 			// using floor division, we can find the previous layer
@@ -276,10 +276,22 @@ func BackPropagation(net *Network, inputs, expected []float64) (vector, vector){
 }
 
 func ApplyGradients(net *Network, costGradientW, costGradientB vector) {
-	for currLayer := 0; currLayer < net.numLayers - 1; currLayer++{
-		for currWeight := 0; currWeight < len(net.layers[currLayer].weights); currWeight++{
-			
+	// keep track of how many weights and biases have been visited
+	totalWeightCounter := 0
+	totalBiasCounter := 0
+	for currLayerIndex := 0; currLayerIndex < net.numLayers - 1; currLayerIndex ++{
+		for currWeightIndex := 0; currWeightIndex < len(net.layers[currLayerIndex].weights); currWeightIndex ++{
+			currWeight := net.layers[currLayerIndex].weights[currWeightIndex]
+			currWeight -= net.learningRate * costGradientW[totalWeightCounter]
+			totalWeightCounter++
 		}
+
+		for currBiasIndex := 0; currBiasIndex < len(net.layers[currLayerIndex].biases); currBiasIndex ++{
+			currBias := net.layers[currLayerIndex].biases[currBiasIndex]
+			currBias -= net.learningRate * costGradientB[totalWeightCounter]
+			totalBiasCounter++
+		}
+
 	}
 }
 
@@ -294,13 +306,13 @@ func ActivationDerivative(weightedSum float64) float64 {
 	return activationValue * (1 - activationValue)
 }
 
-func Cost(net Network, expectedValues []int) float64 {
+func Cost(net Network, expectedValues []float64) float64 {
 	// cost function, see how 'wrong' each final output value was
 	// calculate and return (expected value - actual value) ** 2
 	lastLayerActivations := net.layers[net.numLayers-1].activations
 	totalCost := 0.0
 	for i := 0; i < len(lastLayerActivations); i++ {
-		cost := (lastLayerActivations[i] - float64(expectedValues[i]))
+		cost := (lastLayerActivations[i] - expectedValues[i])
 		totalCost += cost * cost
 	}
 
