@@ -46,4 +46,6 @@ func mainT() {
 	inputs := []float64{2.5, 1}
 	expected := []float64{1, 1}
 	network.BackPropagation(&NNetwork, inputs, expected)
+	
+	// costGradientW, costGradientB := network.BackPropagation(&NNetwork, inputs, expected)
 }

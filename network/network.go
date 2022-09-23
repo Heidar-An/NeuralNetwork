@@ -173,6 +173,31 @@ func GetActivationDerivatives(net *Network, weightedSums vector) vector {
 	return activationDerivatives
 }
 
+func calcWeightDerivative(net *Network, costGradientW vector, currLayer, tempCurrNode int) float64 {
+	// used to calculate part of the derivative for the weight, if the weight is not in the last layer
+	currWeightDerivative := 1.0
+	/* get the derivative of the each weight connected to the node connected to right now
+	   add them up and multiply it by x*/
+				
+	// find number of weights (for the particular node) in the layer in front
+	numNodesInFront := net.layers[currLayer + 1].nodesOut
+
+	// add up the derivates for the weights of the nodes in front
+	for weightNum := 0; weightNum < numNodesInFront; weightNum++{
+		/* the derivative has the current activation value multiplied,
+		   so divide it
+		   add current derivative with derivative of weight in front
+		   divide by the derivative of the current activation values
+		   multiply by P derivative of weighted sum w.r.t activation value
+		   which is just the weight value */
+		weightDerivativeAddition := costGradientW[weightNum * tempCurrNode] 
+		weightDerivativeAddition /= net.layers[currLayer].activations[tempCurrNode]
+		weightDerivativeAddition *= net.layers[currLayer].weights[weightNum * tempCurrNode]
+		currWeightDerivative += (weightDerivativeAddition)
+	}
+	return currWeightDerivative
+}
+
 func BackPropagation(net *Network, inputs, expected []float64) (vector, vector){
 	// A LOT OF COMMENTS HERE, because the function was hard to write
 	/*compute backpropagation
@@ -229,27 +254,8 @@ func BackPropagation(net *Network, inputs, expected []float64) (vector, vector){
 			of node connected to weight */
 			currWeightDerivative *= costDerivatives[tempCurrNode]
 			if(currLayer != net.numLayers - 2){
-				currWeightDerivative = 1.0
-				/* get the derivative of the each weight connected to the node connected to right now
-				   add them up and multiply it by x*/
-				
-				// find number of weights (for the particular node) in the layer in front
-				numNodesInFront := net.layers[currLayer + 1].nodesOut
-
-				// add up the derivates for the weights of the nodes in front
-				for weightNum := 0; weightNum < numNodesInFront; weightNum++{
-					/* the derivative has the current activation value multiplied,
-					   so divide it
-					   add current derivative with derivative of weight in front
-					   divide by the derivative of the current activation values
-					   multiply by P derivative of weighted sum w.r.t activation value
-					   which is just the weight value */
-					weightDerivativeAddition := costGradientW[weightNum * tempCurrNode] 
-					weightDerivativeAddition /= net.layers[currLayer].activations[tempCurrNode]
-					weightDerivativeAddition *= net.layers[currLayer].weights[weightNum * tempCurrNode]
-					currWeightDerivative += (weightDerivativeAddition)
-				}
-
+				// calculate the part of the derivative for the current weight if not in the last layer
+				currWeightDerivative = calcWeightDerivative(net, costGradientW, currLayer, tempCurrNode)
 			}
 			// finds the neuron value from the previous layer
 			// using floor division, we can find the previous layer
