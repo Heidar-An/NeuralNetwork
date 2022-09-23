@@ -173,7 +173,7 @@ func GetActivationDerivatives(net *Network, weightedSums vector) vector {
 	return activationDerivatives
 }
 
-func BackPropagation(net *Network, inputs, expected []float64) {
+func BackPropagation(net *Network, inputs, expected []float64) (vector, vector){
 	// A LOT OF COMMENTS HERE, because the function was hard to write
 	/*compute backpropagation
 	go through network, find out how much each weight and bias
@@ -190,24 +190,25 @@ func BackPropagation(net *Network, inputs, expected []float64) {
 
 	// keep track of gradients for each weight and bias
 	costGradientW := vector{}
-	//costGradientB := vector{}
+	costGradientB := vector{}
 
 	// keep track of what node we are visiting (going from the back)
 	currNode := len(allActivations) - 1
 	println(currNode)
+
 	// calculate the partial derivatives of cost w.r.t to weights, biases
-	for i := net.numLayers - 2; i >= 0; i-- {
-		currWeights := net.layers[i].weights
+	for currLayer := net.numLayers - 2; currLayer >= 0; currLayer-- {
+		currWeights := net.layers[currLayer].weights
 
 		// how many nodes the weights are connected to.
-		numOutputNodes := net.layers[i].nodesOut
+		numOutputNodes := net.layers[currLayer].nodesOut
 
 		/* find the previous layers activations (for use in derivative)
 		   for the first layer, the activations are the input
 		   otherwise make the activations the ones from the previous layer*/
 		prevLayerActivations := inputs
-		if(i != 0){
-			prevLayerActivations = net.layers[i - 1].activations
+		if(currLayer != 0){
+			prevLayerActivations = net.layers[currLayer - 1].activations
 		}
 
 		/* the node position decreases by the number of nodes outgoing
@@ -227,19 +228,29 @@ func BackPropagation(net *Network, inputs, expected []float64) {
 			/* multiply by the derivative of cost function w.r.t to activation value
 			of node connected to weight */
 			currWeightDerivative *= costDerivatives[tempCurrNode]
-			if(i != net.numLayers - 2){
-				/* get the derivative of the first weight connected to the node connected to right now
-					it could be any weight, but each neuron will always have at least one weight */
+			if(currLayer != net.numLayers - 2){
+				currWeightDerivative = 1.0
+				/* get the derivative of the each weight connected to the node connected to right now
+				   add them up and multiply it by x*/
 				
-				// find number of weights in the layer in front
-				// numNodesInFront := net.layers[i + 1].nodesOut
-				currWeightDerivative *= costGradientW[0] // change
-				
-				// the derivative has the current activation value multiplied,
-				// so divide it
-				currWeightDerivative /= net.layers[i].activations[tempCurrNode]
-			}
+				// find number of weights (for the particular node) in the layer in front
+				numNodesInFront := net.layers[currLayer + 1].nodesOut
 
+				// add up the derivates for the weights of the nodes in front
+				for weightNum := 0; weightNum < numNodesInFront; weightNum++{
+					/* the derivative has the current activation value multiplied,
+					   so divide it
+					   add current derivative with derivative of weight in front
+					   divide by the derivative of the current activation values
+					   multiply by P derivative of weighted sum w.r.t activation value
+					   which is just the weight value */
+					weightDerivativeAddition := costGradientW[weightNum * tempCurrNode] 
+					weightDerivativeAddition /= net.layers[currLayer].activations[tempCurrNode]
+					weightDerivativeAddition *= net.layers[currLayer].weights[weightNum * tempCurrNode]
+					currWeightDerivative += (weightDerivativeAddition)
+				}
+
+			}
 			// finds the neuron value from the previous layer
 			// using floor division, we can find the previous layer
 			numActivationPrevLayer := j / numOutputNodes
@@ -254,10 +265,16 @@ func BackPropagation(net *Network, inputs, expected []float64) {
 			costGradientW = append(costGradientW, currWeightDerivative)
 		}
 	}
+
+	return costGradientW, costGradientB
 }
 
-func ApplyGradients(net *Network) {
-
+func ApplyGradients(net *Network, costGradientW, costGradientB vector) {
+	for currLayer := 0; currLayer < net.numLayers - 1; currLayer++{
+		for currWeight := 0; currWeight < len(net.layers[currLayer].weights); currWeight++{
+			
+		}
+	}
 }
 
 func Activation(weightedSum float64) float64 {
