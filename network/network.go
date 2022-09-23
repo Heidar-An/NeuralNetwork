@@ -1,5 +1,10 @@
 package network
-
+/*
+ Not inspired by anyone, but was greatly helped by the videos by 3b1b and Sebastian Lague 
+ on Neural Networks
+ The equations/ understanding of backpropagation they gave me definitely helped, 
+ as well as other information such as cost functions, activation functions etc
+*/
 import (
 	"fmt"
 	"io"
@@ -192,7 +197,6 @@ func BackPropagation(net *Network, inputs, expected []float64) {
 	println(currNode)
 	// calculate the partial derivatives of cost w.r.t to weights, biases
 	for i := net.numLayers - 2; i >= 0; i-- {
-		
 		currWeights := net.layers[i].weights
 
 		// how many nodes the weights are connected to.
@@ -211,28 +215,42 @@ func BackPropagation(net *Network, inputs, expected []float64) {
 		--the ones the weights are connected to */
 		currNode -= numOutputNodes
 
-		// keep track of derivative value
-		currWeightDerivative := 1.0
 		for j := 0; j < len(currWeights); j++ {
 			// create a temp var that stores the pos of the current node in the connecting layer
 			// in brackets just to be safe ;)
 			tempCurrNode := (j % numOutputNodes)
 			println("tempCurrNode", tempCurrNode)
-			// find what activation (from the top of the layer) the current weight is connected to
-			// e.g. 1 means one node from the top
+
+			/* keep track of derivative value
+			   if not the last layer, then reuse the derivative from the last layer*/
+			currWeightDerivative := 1.0
+			/* multiply by the derivative of cost function w.r.t to activation value
+			of node connected to weight */
+			currWeightDerivative *= costDerivatives[tempCurrNode]
+			if(i != net.numLayers - 2){
+				/* get the derivative of the first weight connected to the node connected to right now
+					it could be any weight, but each neuron will always have at least one weight */
+				
+				// find number of weights in the layer in front
+				// numNodesInFront := net.layers[i + 1].nodesOut
+				currWeightDerivative *= costGradientW[0] // change
+				
+				// the derivative has the current activation value multiplied,
+				// so divide it
+				currWeightDerivative /= net.layers[i].activations[tempCurrNode]
+			}
 
 			// finds the neuron value from the previous layer
 			// using floor division, we can find the previous layer
 			numActivationPrevLayer := j / numOutputNodes
+
 			// derivative of weighted sum w.r.t weight is activation values from prev layer
 			currWeightDerivative *= prevLayerActivations[numActivationPrevLayer]
 
 			// multiply by the derivative of activation value w.r.t to weighted sum
 			currWeightDerivative *= activationDerivatives[tempCurrNode]
 
-			/* multiply by the derivative of cost function w.r.t to activation value
-			of node connected to weight */
-			currWeightDerivative *= costDerivatives[tempCurrNode]
+			// store the value of the derivative
 			costGradientW = append(costGradientW, currWeightDerivative)
 		}
 	}
