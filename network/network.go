@@ -173,7 +173,7 @@ func GetActivationDerivatives(net *Network, weightedSums vector) vector {
 	return activationDerivatives
 }
 
-func calcWeightPastDerivative(net *Network, costGradientW vector, currLayer, tempCurrNode int) float64 {
+func calcWeightPastDerivative(net *Network, costGradientW vector, currLayer, currOutputNode int) float64 {
 	// used to calculate part of the derivative from before for the weight, if the weight is not in the last layer
 	currWeightDerivative := 1.0
 	/* get the derivative of the each weight connected to the node connected to right now
@@ -190,78 +190,80 @@ func calcWeightPastDerivative(net *Network, costGradientW vector, currLayer, tem
 		   divide by the P derivative of the current activation values
 		   multiply by P derivative of weighted sum w.r.t activation value
 		   which is just the weight value */
-		weightDerivativeAddition := costGradientW[weightNum * tempCurrNode] 
-		weightDerivativeAddition /= net.layers[currLayer].activations[tempCurrNode]
-		weightDerivativeAddition *= net.layers[currLayer].weights[weightNum * tempCurrNode]
+		weightDerivativeAddition := costGradientW[weightNum * currOutputNode] 
+		weightDerivativeAddition /= net.layers[currLayer].activations[currOutputNode]
+		weightDerivativeAddition *= net.layers[currLayer].weights[weightNum * currOutputNode]
 		currWeightDerivative += (weightDerivativeAddition)
 	}
 	return currWeightDerivative
 }
 
-func calcFullWeightDerivative(net *Network, costGradientW, costDerivatives, prevLayerActivations, activationDerivatives vector, currWeightIndex, currLayerIndex, numOutputNodes int) float64{
-	// create a temp var that stores the pos of the current node in the connecting layer
-	// in brackets just to be safe ;)
-	tempCurrNode := (currWeightIndex % numOutputNodes)
-	println("tempCurrNode", tempCurrNode)
+func calcFullWeightDerivative(net *Network, costGradientW *vector, costDerivatives, prevLayerActivations, activationDerivatives vector, currOutputNode, currInputNode, currLayerIndex int){
+	println("outputNode", currOutputNode)
 
 	/* keep track of derivative value
 	   if not the last layer, then reuse the derivative from the last layer*/
 	currWeightDerivative := 1.0
 	
-	if(currLayerIndex != net.numLayers - 2){
-		// calculate the part of the derivative for the current weight if not in the last layer
-		currWeightDerivative = calcWeightPastDerivative(net, costGradientW, currLayerIndex, tempCurrNode)
-	}else{
+	if(currLayerIndex == net.numLayers - 2){
 		/* multiply by the derivative of cost function w.r.t to activation value
 		of node connected to weight */
-		currWeightDerivative *= costDerivatives[tempCurrNode]
+		currWeightDerivative *= costDerivatives[currOutputNode]
+	}else{
+		// calculate the part of the derivative for the current weight if not in the last layer
+		currWeightDerivative = calcWeightPastDerivative(net, *(costGradientW), currLayerIndex, currOutputNode)
 	}	
-	// finds the neuron value from the previous layer
-	// using floor division, we can find the previous layer
-	numActivationPrevLayer := currWeightIndex / numOutputNodes
-
 	// multiply by the derivative of activation value w.r.t to weighted sum
-	currWeightDerivative *= activationDerivatives[tempCurrNode]
+	currWeightDerivative *= activationDerivatives[currOutputNode]
 
 	// derivative of weighted sum w.r.t weight is activation values from prev layer
 	// the derivative is the activation value of the previous neuron
-	currWeightDerivative *= prevLayerActivations[numActivationPrevLayer]
+	currWeightDerivative *= prevLayerActivations[currInputNode]
 
-	return currWeightDerivative
+	// store the value of the derivative
+	*costGradientW = append(*(costGradientW), currWeightDerivative)
 }
 
-func calcFullBiasDerivative(net *Network, costGradientB, costDerivatives, prevLayerActivations, activationDerivatives vector, currBiasIndex, currLayerIndex, numOutputNodes int) float64 {
+func calcFullBiasDerivative(net *Network, costGradientB *vector, costDerivatives, prevLayerActivations, activationDerivatives vector, currOutputNode, currLayerIndex int) {
 	// keep track of current derivative for bias
 	currBiasDerivative := 1.0
 
+	if(currLayerIndex == net.numLayers - 2){
+		/* multiply by the derivative of cost function w.r.t to activation value
+		of node connected to bias */
+		currBiasDerivative *= costDerivatives[currOutputNode]
+	}else{
+		// calculate the part of the derivative for the current bias if not in the last layer
+		currBiasDerivative = calcBiasPastDerivative(net, *(costGradientB), currLayerIndex, currOutputNode)
+	}
 	
-	/* multiply by the derivative of cost function w.r.t to activation value
-	of node connected to weight */
-	currBiasDerivative *= 
-
-	// derivative of weighted sum w.r.t weight is activation values from prev layer
-	currBiasDerivative *= prevLayerActivations[numActivationPrevLayer]
+	// derivative of weighted sum w.r.t bias from prev layer is just 1.0
+	// I KNOW THE COMPUTATION IS NOT NECESSARY, but I am leaving it here for completeness
+	currBiasDerivative *= 1.0
 
 	// multiply by the derivative of the activation value w.r.t to weighted sum
-	currBiasDerivative *= activationDerivatives[tempCurrNode]
+	currBiasDerivative *= activationDerivatives[currOutputNode]
+
+	// store the value of the derivative
+	*costGradientB = append(*(costGradientB), currBiasDerivative)
 }
 
-func calcBiasPastDerivative(net *Network, costGradientB vector, currLayer, tempCurrNode int) float64 {
+func calcBiasPastDerivative(net *Network, costGradientB vector, currLayer, currOutputNode int) float64 {
 	// used to calculate part of the derivative from before for the bias, if the bias is not in the last layer
 	currBiasDerivative := 1.0
 
 	numNodesInFront := net.layers[currLayer + 1].nodesOut
 
-	// add up the derivates for the weights of the nodes in front
+	// add up the derivatives for the biases of the neurons/nodes in front
 	for biasNum := 0; biasNum < numNodesInFront; biasNum++{
 		/* the derivative has the the derivative of weighted w.r.t bias multiplied,
 		   so divide it - not needed
-		   add current derivative with derivative of weight in front
+		   add current derivative with derivative of bias in front
 		   divide by the derivative of the current activation values - which is just 1
 		   multiply by P derivative of weighted sum w.r.t activation value
 		   which is just the weight value */
-		biasDerivativeAddition := costGradientB[biasNum * tempCurrNode] 
-		biasDerivativeAddition *= net.layers[currLayer].biases[biasNum * tempCurrNode]
+		biasDerivativeAddition := costGradientB[biasNum * currOutputNode] 
+		biasDerivativeAddition *= net.layers[currLayer].weights[biasNum * currOutputNode]
 		currBiasDerivative += (biasDerivativeAddition)
 	}
 	return currBiasDerivative
@@ -269,9 +271,11 @@ func calcBiasPastDerivative(net *Network, costGradientB vector, currLayer, tempC
 
 func BackPropagation(net *Network, inputs, expected []float64) (vector, vector){
 	// A LOT OF COMMENTS HERE, because the function was hard to write
+
 	/*compute backpropagation
 	go through network, find out how much each weight and bias
-	has an effect on the network has a whole*/
+	has an effect on the network has a whole. Objective is to minimise cost function.
+	Calculate the direction of greatest change, then store it*/
 
 	allActivations, allWeightedSums := FeedForward(net, inputs)
 
@@ -292,11 +296,9 @@ func BackPropagation(net *Network, inputs, expected []float64) (vector, vector){
 
 	// calculate the partial derivatives of cost w.r.t to weights, biases
 	for currLayerIndex := net.numLayers - 2; currLayerIndex >= 0; currLayerIndex-- {
-		currWeights := net.layers[currLayerIndex].weights
-		currBiases := net.layers[currLayerIndex].biases
-
 		// how many nodes the weights are connected to.
 		numOutputNodes := net.layers[currLayerIndex].nodesOut
+		numInputNodes := net.layers[currLayerIndex].nodesIn
 
 		/* find the previous layers activations (for use in derivative)
 		   for the first layer, the activations are the input
@@ -311,20 +313,22 @@ func BackPropagation(net *Network, inputs, expected []float64) (vector, vector){
 		--the ones the weights are connected to */
 		currNode -= numOutputNodes
 
-		for currWeightIndex := 0; currWeightIndex < len(currWeights); currWeightIndex++ {
-			currWeightDerivative := calcFullWeightDerivative(net, costGradientW, costDerivatives, prevLayerActivations, activationDerivatives, currWeightIndex, currLayerIndex, numOutputNodes)
+		// outer loop run for the number of biases
+		for currOutputNode := 0; currOutputNode < numOutputNodes; currOutputNode++{
+			// inner loop run for the number of weights, weights = nodes in * nodes out
+			for currInputNode := 0; currInputNode < numInputNodes; currInputNode++{
+				// calculate and store the derivative of the weight
+				calcFullWeightDerivative(net, &costGradientW, costDerivatives, 
+					prevLayerActivations, activationDerivatives, currOutputNode, currInputNode,
+					currLayerIndex)
+			}
 
-			// store the value of the derivative
-			costGradientW = append(costGradientW, currWeightDerivative)
+			// calculate and store the derivative of the bias
+			calcFullBiasDerivative(net, &costGradientB, costDerivatives, 
+				prevLayerActivations, activationDerivatives, currOutputNode, 
+				currLayerIndex)
 		}
 
-		for currBiasIndex := 0; currBiasIndex < len(currBiases); currBiasIndex++{
-
-			currBiasDerivative := calcFullBiasDerivative(net, costGradientB, costDerivatives, prevLayerActivations, activationDerivatives, currBiasIndex, currLayerIndex, numOutputNodes)
-
-			// store the value of the derivative
-			costGradientB = append(costGradientB, currBiasDerivative)
-		}
 	}
 
 	return costGradientW, costGradientB
