@@ -1,8 +1,8 @@
 # Neural Network Go Library
 
 ## What is this? 
-A library written using Go. The library allows users to create a neural network with a configurable number of neurons and layers. <br \>
-The library also implements backpropgation using gradient descent to gradually reduce the cost function. <br \>
+A library written using Go. The library allows users to create a neural network with a configurable number of neurons and layers. <br />
+The library also implements backpropgation using gradient descent to gradually reduce the cost function. <br />
 I tested the neural network library against the MNIST database: http://yann.lecun.com/exdb/mnist/ , a list of handwritten digits <br \>
 Lastly, I also implemented a graphical user design so that users could draw digits themselves, and test it against the neural network. 
 This was done using the ebitengine graphical library https://ebitengine.org/ <br \>
