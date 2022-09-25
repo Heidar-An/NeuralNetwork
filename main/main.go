@@ -23,7 +23,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 	return 560, 560
 }
 
-func main(){
+func mainT(){
 	//game := &Game{}
 	ebiten.SetWindowSize(560, 560)
 	ebiten.SetWindowTitle("Digit Drawer")
@@ -39,13 +39,16 @@ func LeftButtonClicked(){
 	println(x, y)
 }
 
-func mainT() {
+func main() {
 	layers := []int{2, 2, 2}
 	learningRate := 0.1
 	NNetwork := network.NewNetwork(layers, learningRate)
 	inputs := []float64{2.5, 1}
 	expected := []float64{1.0, 1.0}
-	network.BackPropagation(&NNetwork, inputs, expected)
-	
-	// costGradientW, costGradientB := network.BackPropagation(&NNetwork, inputs, expected)
+
+	for i := 0; i < 50; i++{
+		costGradientW, costGradientB := network.BackPropagation(&NNetwork, inputs, expected)
+
+		network.ApplyGradients(&NNetwork, costGradientW, costGradientB)
+	}
 }

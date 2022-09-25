@@ -199,8 +199,6 @@ func calcWeightPastDerivative(net *Network, costGradientW vector, currLayer, cur
 }
 
 func calcFullWeightDerivative(net *Network, costGradientW *vector, costDerivatives, prevLayerActivations, activationDerivatives vector, currOutputNode, currInputNode, currLayerIndex int){
-	println("outputNode", currOutputNode)
-
 	/* keep track of derivative value
 	   if not the last layer, then reuse the derivative from the last layer*/
 	currWeightDerivative := 1.0
@@ -278,6 +276,7 @@ func BackPropagation(net *Network, inputs, expected []float64) (vector, vector){
 	Calculate the direction of greatest change, then store it*/
 
 	allActivations, allWeightedSums := FeedForward(net, inputs)
+	Cost(*(net), expected)
 
 	// calculate the partial derivatives of cost func w.r.t activations
 	lastLayer := net.layers[net.numLayers-2]
@@ -292,7 +291,6 @@ func BackPropagation(net *Network, inputs, expected []float64) (vector, vector){
 
 	// keep track of what node we are visiting (going from the back)
 	currNode := len(allActivations) - 1
-	println(currNode)
 
 	// calculate the partial derivatives of cost w.r.t to weights, biases
 	for currLayerIndex := net.numLayers - 2; currLayerIndex >= 0; currLayerIndex-- {
@@ -339,17 +337,21 @@ func ApplyGradients(net *Network, costGradientW, costGradientB vector) {
 	totalWeightCounter := 0
 	totalBiasCounter := 0
 
-	// because our cost function did actualValue - expectedValue, we have to subtract the weight
-	for currLayerIndex := 0; currLayerIndex < net.numLayers - 1; currLayerIndex ++{
+	// because our cost function did expectedValue - actualValue, we have to add the derivative
+	for currLayerIndex := 0; currLayerIndex < net.numLayers - 2; currLayerIndex++{
 		for currWeightIndex := 0; currWeightIndex < len(net.layers[currLayerIndex].weights); currWeightIndex ++{
 			currWeight := net.layers[currLayerIndex].weights[currWeightIndex]
+			//println("This weig grad is: ", costGradientW[totalWeightCounter])
 			currWeight += net.learningRate * costGradientW[totalWeightCounter]
+			net.layers[currLayerIndex].weights[currWeightIndex] = currWeight
 			totalWeightCounter++
 		}
 
 		for currBiasIndex := 0; currBiasIndex < len(net.layers[currLayerIndex].biases); currBiasIndex ++{
 			currBias := net.layers[currLayerIndex].biases[currBiasIndex]
-			currBias -= net.learningRate * costGradientB[totalWeightCounter]
+			//println("This bias grad is: ", costGradientB[totalBiasCounter])
+			currBias += net.learningRate * costGradientB[totalBiasCounter]
+			net.layers[currLayerIndex].biases[currBiasIndex] = currBias
 			totalBiasCounter++
 		}
 	}
@@ -369,13 +371,13 @@ func ActivationDerivative(weightedSum float64) float64 {
 func Cost(net Network, expectedValues []float64) float64 {
 	// cost function, see how 'wrong' each final output value was
 	// calculate and return (expected value - actual value) ** 2
-	lastLayerActivations := net.layers[net.numLayers-1].activations
+	lastLayerActivations := net.layers[net.numLayers - 2].activations
 	totalCost := 0.0
 	for i := 0; i < len(lastLayerActivations); i++ {
 		cost := (lastLayerActivations[i] - expectedValues[i])
 		totalCost += cost * cost
 	}
-
+	println("Cost: ", totalCost)
 	return totalCost
 }
 
