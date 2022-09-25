@@ -16,5 +16,5 @@ Go - v1.18 <br />
 ebiten, ebitengine - v2.4.4 <br />
 
 ## Future Plans/Improvements
-I plan to add some optimisers, to make it faster <br />
+I plan to add some optimisers, to make it faster such as <br />
 Furthermore, I plan on augmenting it to make it a convolutional neural network. However, I might redo the project in Rust instead for that. <br />
