@@ -12,7 +12,7 @@ A feeling of wanting to learn how to use Go, and understand more about the intui
 Implementing backpropagation was especially difficult, (but rewarding!) as it required me to really understand how it works
 
 ## Technologies
-Go - v1.18
+Go - v1.18 \
 ebiten, ebitengine - v2.4.4
 
 ## Future Plans/Improvements
