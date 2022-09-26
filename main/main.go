@@ -4,6 +4,7 @@ import (
 	"NeuralNetwork/network"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/petar/GoMNIST"
 )
 
 type Game struct{}
@@ -50,5 +51,18 @@ func main() {
 		costGradientW, costGradientB := network.BackPropagation(&NNetwork, inputs, expected)
 
 		network.ApplyGradients(&NNetwork, costGradientW, costGradientB)
+	}
+
+	train, test, err := GoMNIST.Load("./data")
+	if err != nil {
+		sweeper := train.Sweep()
+		for {
+			image, label, present := sweeper.Next()
+			if !present {
+				break
+			}
+			GoMNIST.ReadImageFile()
+		}
+		test.Sweep()
 	}
 }
